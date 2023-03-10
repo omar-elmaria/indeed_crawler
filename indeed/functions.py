@@ -63,18 +63,21 @@ def company_name_finder_func(x, companies_df):
     # If all the company names in the for loop are exhausted and no match is found, return "no_match"
     return None, "no_match", idx
 
-def post_crawling_func(output_json_file, crawler_name):
+def post_crawling_func(crawler_name):
     import json
     import pandas as pd
     import os
-    from inputs import output_file_name_of_google_crawler
+    from inputs import (
+        output_file_name_of_indeed_crawler,
+        output_file_name_of_google_crawler
+    )
     from google.cloud import bigquery
     from google.oauth2 import service_account
     import yagmail
     from datetime import datetime
 
     # Open the JSON file containing the output and format the data
-    with open(f"{output_json_file}.json", mode="r", encoding="utf-8") as f:
+    with open(f"{output_file_name_of_indeed_crawler}.json", mode="r", encoding="utf-8") as f:
         df = json.load(f)
         df = pd.DataFrame(df)
         f.close()
