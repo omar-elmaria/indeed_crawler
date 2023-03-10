@@ -69,12 +69,21 @@ def post_crawling_func(crawler_name):
     import os
     from inputs import (
         output_file_name_of_indeed_crawler,
-        output_file_name_of_google_crawler
+        output_file_name_of_google_crawler,
+        output_name_of_indeed_logs_file
     )
     from google.cloud import bigquery
     from google.oauth2 import service_account
     import yagmail
     from datetime import datetime
+    import logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s  - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+        filename=output_name_of_indeed_logs_file,
+
+    )
 
     # Open the JSON file containing the output and format the data
     with open(f"{output_file_name_of_indeed_crawler}.json", mode="r", encoding="utf-8") as f:
@@ -83,9 +92,11 @@ def post_crawling_func(crawler_name):
         f.close()
     
     # Apply the salary_type_func
+    logging.info("Applying the salary_type func")
     df["salary_type"] = df["salary"].apply(salary_type_func)
 
     # Create the columns containing the salary bands
+    logging.info("Create the columns containing the salary bands")
     df["salary_low"] = df[["salary", "salary_type"]].apply(lambda x: salary_low_func(*x), axis=1)
     df["salary_high"] = df.apply(lambda x: salary_high_func(x["salary"], x["salary_type"]), axis=1)
 
@@ -104,12 +115,14 @@ def post_crawling_func(crawler_name):
         f.close()
     
     # Merge the phone numbers with the main data frame
+    logging.info("Merging the phone numbers with the main data frame")
     df = pd.merge(left=df, right=df_phone_numbers, on="company_name", how="left")
 
     ###-------------------------------END OF PHONE NUMBER ADDITION PART------------------------------###
 
     # Add the company's industry to the data frame based on the company's name
     # First, read the CSV file containing the company names and indstries
+    logging.info("Opening the company_industry_list CSV file and applying some cleaning rules to the company_name column")
     companies = pd.read_csv("company_industry_list.csv")
 
     # Filter out NULL values
@@ -121,20 +134,22 @@ def post_crawling_func(crawler_name):
     # Filter out rows where company_name_clean == company_name. Those rows have ONLY ASCII characters
     companies = companies[companies["company_name"] == companies["company_name_clean"]].sort_values(by="company_name").reset_index(drop=True)
 
+    logging.info("Creating three new columns industry, industry_match_type, and industry_match_idx and move the timestamp column to the very end of the data frame")
     # Create a new column called "industry". The second apply function is to pick the "industry" from the tuple produced by the company_name_finder_func
     df["industry"] = df.apply(lambda x: company_name_finder_func(x["company_name"], companies), axis=1).apply(lambda x: x[0])
 
-    # Create a new column called "industry". The second apply function is to pick the "match type" from the tuple produced by the company_name_finder_func
-    df["match_type"] = df.apply(lambda x: company_name_finder_func(x["company_name"], companies), axis=1).apply(lambda x: x[1])
+    # Create a new column called "industry_match_type". The second apply function is to pick the "industry_match_type" from the tuple produced by the company_name_finder_func
+    df["industry_match_type"] = df.apply(lambda x: company_name_finder_func(x["company_name"], companies), axis=1).apply(lambda x: x[1])
 
-    # Create a new column called "match_idx". The second apply function is to pick the "match_idx" from the tuple produced by the company_name_finder_func
-    df["match_idx"] = df.apply(lambda x: company_name_finder_func(x["company_name"], companies), axis=1).apply(lambda x: x[2])
+    # Create a new column called "industry_match_idx". The second apply function is to pick the "industry_match_idx" from the tuple produced by the company_name_finder_func
+    df["industry_match_idx"] = df.apply(lambda x: company_name_finder_func(x["company_name"], companies), axis=1).apply(lambda x: x[2])
 
     # Move the timestamp column to the very end of the data frame
     df[[col for col in df if col not in ["crawled_timestamp"]] + ["crawled_timestamp"]]
 
     ###--------------------------------END OF INDUSTRY ADDITION PART--------------------------------###
 
+    logging.info("Uploading results to BQ")
     # Upload the results to bigquery
     # First, set the credentials
     key_path_local = os.getcwd() + "/bq_credentials.json"
@@ -169,8 +184,8 @@ def post_crawling_func(crawler_name):
             
             # Fields from the Excel file containing the industry of each company name
             bigquery.SchemaField("industry", "STRING"),
-            bigquery.SchemaField("match_type", "STRING"),
-            bigquery.SchemaField("match_idx", "INT64"),
+            bigquery.SchemaField("industry_match_type", "STRING"),
+            bigquery.SchemaField("industry_match_idx", "INT64"),
 
             # Crawled timestamp
             bigquery.SchemaField("crawled_timestamp", "TIMESTAMP"),
@@ -186,6 +201,7 @@ def post_crawling_func(crawler_name):
     ).result()
 
     # Step 16: Send success E-mail
+    logging.info("Sending success E-mail\n")
     yag = yagmail.SMTP("omarmoataz6@gmail.com", oauth2_file=os.getcwd() + "/email_authentication.json")
     contents = [
         f"This is an automatic notification to inform you that the Indeed {crawler_name} ran successfully"
