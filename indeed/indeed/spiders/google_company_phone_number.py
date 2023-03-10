@@ -4,13 +4,16 @@ import pandas as pd
 import re
 from inputs import (
     custom_settings_zyte_api_dict,
-    output_file_name_of_indeed_crawler
+    output_file_name_of_indeed_crawler,
+    output_file_name_of_google_crawler,
+    output_name_of_indeed_logs_file
 )
+from scrapy.crawler import CrawlerProcess
+import logging
 
 
 class GoogleSpider(scrapy.Spider):
     name = 'google_spider'
-    custom_settings=custom_settings_zyte_api_dict
     
     def start_requests(self):
         # Open the JSON files containing the company names
@@ -24,7 +27,7 @@ class GoogleSpider(scrapy.Spider):
 
         for i in df_company_names:
             search_query = "https://www.google.com/search?hl=en&lr=lang_en&q=" + i.replace(" ", "+") + "+" + "phone+number+in+Toronto%2C+Canada"
-            print(f"Send a request to Google with the following search query --> {search_query}")
+            logging.info(f"Send a request to Google with the following search query --> {search_query}")
             yield scrapy.Request(
                 url=search_query,
                 callback=self.parse,
@@ -56,3 +59,13 @@ class GoogleSpider(scrapy.Spider):
             "search_query": response.meta["search_query"],
             "phone_number": phone_number
         }
+
+# Run the spider
+full_settings_dict = custom_settings_zyte_api_dict.copy()
+full_settings_dict.update({
+    "FEEDS": {f"{output_file_name_of_google_crawler}.json":{"format": "json", "overwrite": True, "encoding": "utf-8"}},
+    "LOG_FILE": f"{output_name_of_indeed_logs_file}.log"
+})
+process = CrawlerProcess(settings=full_settings_dict)
+process.crawl(GoogleSpider)
+process.start()
