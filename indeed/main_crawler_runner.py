@@ -29,8 +29,8 @@ def main():
     @defer.inlineCallbacks
     def crawl():
         # Run the first crawler that crawls this link --> https://ca.indeed.com/jobs?l=Greater+Toronto+Area%2C+ON&sc=0kf%3Aocc%286YCJB%29%3B&radius=35&sort=date&vjk=f55ce01235a88065
-        from indeed.spiders.indeed_zyte_api_1 import IndeedZyteAPI1Spider
-        yield runner_indeed.crawl(IndeedZyteAPI1Spider)
+        from indeed.spiders.indeed_zyte_api import IndeedZyteAPISpider
+        yield runner_indeed.crawl(IndeedZyteAPISpider)
 
         # Run the second crawler that crawls the phone numbers from Google
         from indeed.spiders.google_company_phone_number import GoogleSpider
