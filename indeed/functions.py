@@ -67,6 +67,7 @@ def post_crawling_func(output_json_file, crawler_name):
     import json
     import pandas as pd
     import os
+    from inputs import output_file_name_of_google_crawler
     from google.cloud import bigquery
     from google.oauth2 import service_account
     import yagmail
@@ -91,6 +92,19 @@ def post_crawling_func(output_json_file, crawler_name):
     # Add another field to identify the crawler
     df["crawler_name"] = crawler_name
 
+    ###---------------------------END OF OUTPUT INGESTION FROM INDEED PART---------------------------###
+    
+    # Open the JSON file containing the phone numbers
+    with open(f"{output_file_name_of_google_crawler}.json", mode="r", encoding="utf-8") as f:
+        df_phone_numbers = json.load(f)
+        df_phone_numbers = pd.DataFrame(df_phone_numbers)
+        f.close()
+    
+    # Merge the phone numbers with the main data frame
+    df = pd.merge(left=df, right=df_phone_numbers, on="company_name", how="left")
+
+    ###-------------------------------END OF PHONE NUMBER ADDITION PART------------------------------###
+
     # Add the company's industry to the data frame based on the company's name
     # First, read the CSV file containing the company names and indstries
     companies = pd.read_csv("company_industry_list.csv")
@@ -113,6 +127,11 @@ def post_crawling_func(output_json_file, crawler_name):
     # Create a new column called "match_idx". The second apply function is to pick the "match_idx" from the tuple produced by the company_name_finder_func
     df["match_idx"] = df.apply(lambda x: company_name_finder_func(x["company_name"], companies), axis=1).apply(lambda x: x[2])
 
+    # Move the timestamp column to the very end of the data frame
+    df[[col for col in df if col not in ["crawled_timestamp"]] + ["crawled_timestamp"]]
+
+    ###--------------------------------END OF INDUSTRY ADDITION PART--------------------------------###
+
     # Upload the results to bigquery
     # First, set the credentials
     key_path_local = os.getcwd() + "/bq_credentials.json"
@@ -124,6 +143,7 @@ def post_crawling_func(output_json_file, crawler_name):
     client = bigquery.Client(project="web-scraping-371310", credentials=credentials)
     job_config = bigquery.LoadJobConfig(
         schema = [
+            # Fields from the main indeed crawler
             bigquery.SchemaField("job_title_name", "STRING"),
             bigquery.SchemaField("job_type", "STRING"),
             bigquery.SchemaField("company_name", "STRING"),
@@ -139,9 +159,17 @@ def post_crawling_func(output_json_file, crawler_name):
             bigquery.SchemaField("salary_low", "FLOAT64"),
             bigquery.SchemaField("salary_high", "FLOAT64"),
             bigquery.SchemaField("crawler_name", "STRING"),
+            
+            # Fields from Google
+            bigquery.SchemaField("search_query", "STRING"),
+            bigquery.SchemaField("phone_number", "STRING"),
+            
+            # Fields from the Excel file containing the industry of each company name
             bigquery.SchemaField("industry", "STRING"),
             bigquery.SchemaField("match_type", "STRING"),
             bigquery.SchemaField("match_idx", "INT64"),
+
+            # Crawled timestamp
             bigquery.SchemaField("crawled_timestamp", "TIMESTAMP"),
         ]
     )
