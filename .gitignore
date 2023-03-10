@@ -7,3 +7,4 @@ bq_credentials.json
 email_authentication.json
 *.gsheet
 *.mp4
+__pycache__
