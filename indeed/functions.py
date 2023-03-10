@@ -14,6 +14,8 @@ def salary_type_func(salary):
             return "month"
         elif salary.find("week") != -1:
             return "week"
+        elif salary.find("day") != -1:
+            return "day"
         else:
             return None
 
@@ -63,7 +65,7 @@ def company_name_finder_func(x, companies_df):
     # If all the company names in the for loop are exhausted and no match is found, return "no_match"
     return None, "no_match", idx
 
-def post_crawling_func(crawler_name):
+def post_crawling_func():
     import json
     import pandas as pd
     import os
@@ -102,9 +104,6 @@ def post_crawling_func(crawler_name):
 
     # Change the data type of crawled_timestamp to datetime
     df["crawled_timestamp"] = df["crawled_timestamp"].apply(lambda x: pd.to_datetime(x))
-
-    # Add another field to identify the crawler
-    df["crawler_name"] = crawler_name
 
     ###---------------------------END OF OUTPUT INGESTION FROM INDEED PART---------------------------###
     
@@ -145,7 +144,7 @@ def post_crawling_func(crawler_name):
     df["industry_match_idx"] = df.apply(lambda x: company_name_finder_func(x["company_name"], companies), axis=1).apply(lambda x: x[2])
 
     # Move the timestamp column to the very end of the data frame
-    df[[col for col in df if col not in ["crawled_timestamp"]] + ["crawled_timestamp"]]
+    df[[col for col in df if col not in ["crawled_timestamp", "crawler_name"]] + ["crawled_timestamp", "crawler_name"]]
 
     ###--------------------------------END OF INDUSTRY ADDITION PART--------------------------------###
 
@@ -176,7 +175,6 @@ def post_crawling_func(crawler_name):
             bigquery.SchemaField("salary_type", "STRING"),
             bigquery.SchemaField("salary_low", "FLOAT64"),
             bigquery.SchemaField("salary_high", "FLOAT64"),
-            bigquery.SchemaField("crawler_name", "STRING"),
             
             # Fields from Google
             bigquery.SchemaField("search_query", "STRING"),
@@ -189,6 +187,7 @@ def post_crawling_func(crawler_name):
 
             # Crawled timestamp
             bigquery.SchemaField("crawled_timestamp", "TIMESTAMP"),
+            bigquery.SchemaField("crawler_name", "STRING"),
         ]
     )
     job_config.write_disposition = bigquery.WriteDisposition.WRITE_APPEND
@@ -204,6 +203,6 @@ def post_crawling_func(crawler_name):
     logging.info("Sending success E-mail\n")
     yag = yagmail.SMTP("omarmoataz6@gmail.com", oauth2_file=os.getcwd() + "/email_authentication.json")
     contents = [
-        f"This is an automatic notification to inform you that the Indeed {crawler_name} ran successfully"
+        f"This is an automatic notification to inform you that the Indeed crawler ran successfully"
     ]
-    yag.send(["omarmoataz6@gmail.com"], f"The Indeed {crawler_name} ran successfully at {datetime.now()} CET", contents)
+    yag.send(["omarmoataz6@gmail.com", "chris@beginrecruitment.com"], f"The Indeed crawler ran successfully at {datetime.now()} CET", contents)
