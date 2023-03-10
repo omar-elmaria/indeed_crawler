@@ -54,7 +54,8 @@ class IndeedZyteAPI1Spider(scrapy.Spider):
             yield scrapy.Request(
                 url=listing_page_url,
                 callback=self.parse_listing_page,
-                meta={"crawled_page_rank": page_counter, "listing_page_url": listing_page_url}
+                meta={"crawled_page_rank": page_counter, "listing_page_url": listing_page_url},
+                dont_filter=True
             )
             page_counter += 1
 
@@ -64,6 +65,7 @@ class IndeedZyteAPI1Spider(scrapy.Spider):
         for li in listings:
             job_title_name = li.xpath(".//h2[contains(@class, 'jobTitle')]/a/span/text()").get()
             if job_title_name is None: # Sometimes, the the HTML content under "li" is NULL. If this is the case, don't add anything to the "output_dict"
+                logging.info(f"The job_title_name of {li} is None. Continuing the the next listing")
                 continue
             else:
                 # Clean the crawled fields
@@ -113,14 +115,15 @@ class IndeedZyteAPI1Spider(scrapy.Spider):
                     "crawled_page_rank": response.meta["crawled_page_rank"]
                 }
 
-                logging.info("Proceeding to crawl data from the job page itself...")
                 yield scrapy.Request(
                     url=job_indeed_url,
                     callback=self.parse_job_page,
-                    meta=output_dict_listing_page
+                    meta=output_dict_listing_page,
+                    dont_filter=True
                 )
         
     def parse_job_page(self, response):
+        logging.info(f"Crawling data from the job page for {response.meta['job_title_name']} in the {response.meta['company_name']} company using this URL --> {response.meta['job_indeed_url']}")
         job_type = response.xpath("//div[text()='Job type']//following-sibling::div/text()").getall()
         if job_type is not None:
             # Remove unwanted keywords from the job_type list
@@ -136,6 +139,7 @@ class IndeedZyteAPI1Spider(scrapy.Spider):
         job_description = response.xpath("//div[@id='jobDescriptionText']//text()").getall()
         if job_description is not None:
             job_description = [job.strip() for job in job_description]
+            job_description = [i for i in job_description if i not in [""]]
             job_description = '\n'.join(job_description)
 
         yield {
