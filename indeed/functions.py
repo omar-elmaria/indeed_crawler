@@ -49,6 +49,20 @@ def salary_low_func(salary, salary_type):
         else:
             return None
 
+# Define a function that loops through the entire company list and searches for industry matches
+def company_name_finder_func(x, companies_df):
+    for idx, i in enumerate(companies_df["company_name"]):
+        # The first type of match is an "exact_match"
+        if x.lower() == i.lower():
+            return companies_df.iloc[idx]["industry"], "exact_match", idx
+        
+        # If no exact match is found, search for a partial match
+        elif x.lower() in i.lower():
+            return companies_df.iloc[idx]["industry"], "partial_match", idx
+    
+    # If all the company names in the for loop are exhausted and no match is found, return "no_match"
+    return None, "no_match", idx
+
 def post_crawling_func(output_json_file, crawler_name):
     import json
     import pandas as pd
@@ -77,6 +91,28 @@ def post_crawling_func(output_json_file, crawler_name):
     # Add another field to identify the crawler
     df["crawler_name"] = crawler_name
 
+    # Add the company's industry to the data frame based on the company's name
+    # First, read the CSV file containing the company names and indstries
+    companies = pd.read_csv("company_industry_list.csv")
+
+    # Filter out NULL values
+    companies = companies[companies["company_name"].notnull()]
+
+    # Add a new column displaying the company's name without non-ascii characters
+    companies["company_name_clean"] = companies["company_name"].apply(lambda x: x.encode("ascii", "ignore").decode())
+
+    # Filter out rows where company_name_clean == company_name. Those rows have ONLY ASCII characters
+    companies = companies[companies["company_name"] == companies["company_name_clean"]].sort_values(by="company_name").reset_index(drop=True)
+
+    # Create a new column called "industry". The second apply function is to pick the "industry" from the tuple produced by the company_name_finder_func
+    df["industry"] = df.apply(lambda x: company_name_finder_func(x["company_name"], companies), axis=1).apply(lambda x: x[0])
+
+    # Create a new column called "industry". The second apply function is to pick the "match type" from the tuple produced by the company_name_finder_func
+    df["match_type"] = df.apply(lambda x: company_name_finder_func(x["company_name"], companies), axis=1).apply(lambda x: x[1])
+
+    # Create a new column called "match_idx". The second apply function is to pick the "match_idx" from the tuple produced by the company_name_finder_func
+    df["match_idx"] = df.apply(lambda x: company_name_finder_func(x["company_name"], companies), axis=1).apply(lambda x: x[2])
+
     # Upload the results to bigquery
     # First, set the credentials
     key_path_local = os.getcwd() + "/bq_credentials.json"
@@ -88,22 +124,25 @@ def post_crawling_func(output_json_file, crawler_name):
     client = bigquery.Client(project="web-scraping-371310", credentials=credentials)
     job_config = bigquery.LoadJobConfig(
         schema = [
-            bigquery.SchemaField("job_title_name", "STRING"), 
-            bigquery.SchemaField("job_type", "STRING"), 
-            bigquery.SchemaField("company_name", "STRING"), 
-            bigquery.SchemaField("company_indeed_url", "STRING"), 
-            bigquery.SchemaField("city", "STRING"), 
-            bigquery.SchemaField("remote", "STRING"), 
-            bigquery.SchemaField("salary", "STRING"), 
-            bigquery.SchemaField("crawled_page_rank", "INT64"),  
-            bigquery.SchemaField("job_page_url", "STRING"), 
-            bigquery.SchemaField("listing_page_url", "STRING"), 
-            bigquery.SchemaField("job_description", "STRING"), 
-            bigquery.SchemaField("crawled_timestamp", "TIMESTAMP"), 
-            bigquery.SchemaField("salary_type", "STRING"), 
+            bigquery.SchemaField("job_title_name", "STRING"),
+            bigquery.SchemaField("job_type", "STRING"),
+            bigquery.SchemaField("company_name", "STRING"),
+            bigquery.SchemaField("company_indeed_url", "STRING"),
+            bigquery.SchemaField("city", "STRING"),
+            bigquery.SchemaField("remote", "STRING"),
+            bigquery.SchemaField("salary", "STRING"),
+            bigquery.SchemaField("crawled_page_rank", "INT64"), 
+            bigquery.SchemaField("job_page_url", "STRING"),
+            bigquery.SchemaField("listing_page_url", "STRING"),
+            bigquery.SchemaField("job_description", "STRING"),
+            bigquery.SchemaField("salary_type", "STRING"),
             bigquery.SchemaField("salary_low", "FLOAT64"),
             bigquery.SchemaField("salary_high", "FLOAT64"),
             bigquery.SchemaField("crawler_name", "STRING"),
+            bigquery.SchemaField("industry", "STRING"),
+            bigquery.SchemaField("match_type", "STRING"),
+            bigquery.SchemaField("match_idx", "INT64"),
+            bigquery.SchemaField("crawled_timestamp", "TIMESTAMP"),
         ]
     )
     job_config.write_disposition = bigquery.WriteDisposition.WRITE_APPEND
