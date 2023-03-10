@@ -39,4 +39,7 @@ suffix = ""
 # Global Inputs
 num_listings_per_page = 15
 page_index_step = 10
-max_page_index = 540
+page_index_max = 540
+output_file_name_of_indeed_crawler = "output_indeed_zyte_api"
+output_file_name_of_google_crawler = "output_phone_numbers"
+output_name_of_indeed_logs_file = "indeed_zyte_api"
