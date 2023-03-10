@@ -1,0 +1,3 @@
+1762 (let's say 1800) records from Indeed --> 0.0005 per record = 0.9 per day
+924 (let's say 1000) records from Google --> 0.001841 per record = 1.841 per day
+Total cost per day = 2.741 x 30 = $82.23 (let's say $100)
