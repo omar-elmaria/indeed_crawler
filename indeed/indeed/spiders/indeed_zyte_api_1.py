@@ -3,18 +3,20 @@ from inputs import (
     custom_settings_zyte_api_dict,
     num_listings_per_page,
     page_index_step,
-    page_index_max
+    page_index_max,
+    output_file_name_of_indeed_crawler,
+    output_name_of_indeed_logs_file
 )
 import re
 from math import ceil
 import logging
 from datetime import datetime
+from scrapy.crawler import CrawlerProcess
 
 
 class IndeedZyteAPI1Spider(scrapy.Spider):
     name = 'indeed_zyte_api_1'
     base_url = "https://ca.indeed.com/jobs?l=Greater+Toronto+Area%2C+ON&sc=0kf%3Aocc%286YCJB%29%3B&radius=35&sort=date&vjk=f55ce01235a88065"
-    custom_settings=custom_settings_zyte_api_dict
     
     def start_requests(self):
         yield scrapy.Request(
@@ -157,3 +159,13 @@ class IndeedZyteAPI1Spider(scrapy.Spider):
             "job_description": job_description,
             "crawled_timestamp": datetime.now()
         }
+
+# Run the spider
+full_settings_dict = custom_settings_zyte_api_dict.copy()
+full_settings_dict.update({
+    "FEEDS": {f"{output_file_name_of_indeed_crawler}.json":{"format": "json", "overwrite": True, "encoding": "utf-8"}},
+    "LOG_FILE": f"{output_name_of_indeed_logs_file}.log"
+})
+process = CrawlerProcess(settings=full_settings_dict)
+process.crawl(IndeedZyteAPI1Spider)
+process.start(stop_after_crawl=False)
