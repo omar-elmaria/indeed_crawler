@@ -81,7 +81,7 @@ def post_crawling_func(crawler_name):
         level=logging.INFO,
         format='%(asctime)s  - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
-        filename=output_name_of_indeed_logs_file,
+        filename=f"{output_name_of_indeed_logs_file}.log",
 
     )
 
