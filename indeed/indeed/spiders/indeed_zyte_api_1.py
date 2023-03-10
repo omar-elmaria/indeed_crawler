@@ -14,20 +14,26 @@ from datetime import datetime
 from scrapy.crawler import CrawlerProcess
 
 
-class IndeedZyteAPI1Spider(scrapy.Spider):
-    name = 'indeed_zyte_api_1'
-    base_url = "https://ca.indeed.com/jobs?l=Greater+Toronto+Area%2C+ON&sc=0kf%3Aocc%286YCJB%29%3B&radius=35&sort=date&vjk=f55ce01235a88065"
+class IndeedZyteAPISpider(scrapy.Spider):
+    name = 'indeed_zyte_api'
     
     def start_requests(self):
-        yield scrapy.Request(
-            url=IndeedZyteAPI1Spider.base_url,
-            callback=self.parse,
-        )
+        urls = [
+            "https://ca.indeed.com/jobs?l=Greater+Toronto+Area%2C+ON&sc=0kf%3Aocc%286YCJB%29%3B&radius=35&sort=date&vjk=f55ce01235a88065", # URL 1
+            "https://ca.indeed.com/jobs?q=Human&l=Greater+Toronto+Area%2C+ON&radius=100&sort=date&vjk=5bd4496580222855" # URL 2
+        ]
+
+        for idx, i in enumerate(urls):
+            yield scrapy.Request(
+                url=i,
+                callback=self.parse,
+                meta={"crawler_name": f"crawler_{idx + 1}", "base_url": i}
+            )
 
     def parse(self, response):
         # Extract the total number of jobs as a string
         num_jobs = response.xpath("//div[@class='jobsearch-JobCountAndSortPane-jobCount']/span/text()").get()
-        logging.info(f"The total number of jobs: {num_jobs}")
+        logging.info(f"The total number of jobs under the URL of {response.meta['crawler_name']}: {num_jobs}")
 
         # Extract the number of jobs as an integer
         num_jobs = int(''.join(re.findall(pattern="\d+", string=num_jobs)))
@@ -46,18 +52,17 @@ class IndeedZyteAPI1Spider(scrapy.Spider):
         num_page_loop_actual = for_loop_end_range / page_index_step + 1
         
         # Print a message showing the number of pages we are supposed to loop over, the for loop's end range index, and the number of pages we will actually loop over
-        logging.info(f"The number of pages we are supposed to loop over is: {ceil(num_jobs / num_listings_per_page)}. The for_loop_end_range index is: {for_loop_end_range}, which makes the number of pages we will actually loop over: {num_page_loop_actual}")
+        logging.info(f"The number of pages we are supposed to loop over under the URL of {response.meta['crawler_name']} is: {ceil(num_jobs / num_listings_per_page)}. The for_loop_end_range index is: {for_loop_end_range}, which makes the number of pages we will actually loop over: {num_page_loop_actual}")
 
         # Loop over every page until all job listings are crawled
         page_counter = 1
-        # for i in range(0, for_loop_end_range + page_index_step, page_index_step):
-        for i in range(0, 10, page_index_step):
-            logging.info(f"Crawling page number {page_counter} with index {i}")
-            listing_page_url = IndeedZyteAPI1Spider.base_url + f"&start={i}"
+        for i in range(0, for_loop_end_range + page_index_step, page_index_step):
+            logging.info(f"Crawling page number {page_counter} with index {i} from the URL of {response.meta['crawler_name']}")
+            listing_page_url = response.meta["base_url"] + f"&start={i}"
             yield scrapy.Request(
                 url=listing_page_url,
                 callback=self.parse_listing_page,
-                meta={"crawled_page_rank": page_counter, "listing_page_url": listing_page_url},
+                meta={"crawled_page_rank": page_counter, "listing_page_url": listing_page_url, "crawler_name": response.meta["crawler_name"]},
                 dont_filter=True
             )
             page_counter += 1
@@ -68,7 +73,7 @@ class IndeedZyteAPI1Spider(scrapy.Spider):
         for li in listings:
             job_title_name = li.xpath(".//h2[contains(@class, 'jobTitle')]/a/span/text()").get()
             if job_title_name is None: # Sometimes, the the HTML content under "li" is NULL. If this is the case, don't add anything to the "output_dict"
-                logging.info(f"The job_title_name of {li} is None. Continuing the the next listing")
+                logging.info(f"The job_title_name of {li} under the URL of {response.meta['crawler_name']} is None. Continuing the the next listing")
                 continue
             else:
                 # Clean the crawled fields
@@ -115,7 +120,8 @@ class IndeedZyteAPI1Spider(scrapy.Spider):
                     "city": city,
                     "remote": remote,
                     "salary": salary,
-                    "crawled_page_rank": response.meta["crawled_page_rank"]
+                    "crawled_page_rank": response.meta["crawled_page_rank"],
+                    "crawler_name": response.meta["crawler_name"]
                 }
 
                 yield scrapy.Request(
@@ -126,7 +132,7 @@ class IndeedZyteAPI1Spider(scrapy.Spider):
                 )
         
     def parse_job_page(self, response):
-        logging.info(f"Crawling data from the job page for {response.meta['job_title_name']} in the {response.meta['company_name']} company using this URL --> {response.meta['job_indeed_url']}")
+        logging.info(f"Crawling data from the job page under the URL of {response.meta['crawler_name']} for {response.meta['job_title_name']} in the {response.meta['company_name']} company using this URL --> {response.meta['job_indeed_url']}")
         job_type = response.xpath("//div[text()='Job type']//following-sibling::div/text()").getall()
         if job_type is not None:
             # Remove unwanted keywords from the job_type list
@@ -158,7 +164,8 @@ class IndeedZyteAPI1Spider(scrapy.Spider):
             "job_page_url": response.meta["job_indeed_url"],
             "listing_page_url": response.meta["listing_page_url"],
             "job_description": job_description,
-            "crawled_timestamp": datetime.now()
+            "crawled_timestamp": datetime.now(),
+            "crawler_name": response.meta["crawler_name"]
         }
 
 # Run the spider
@@ -168,5 +175,5 @@ full_settings_dict.update({
     "LOG_FILE": f"{output_name_of_indeed_logs_file}.log"
 })
 process = CrawlerProcess(settings=full_settings_dict)
-process.crawl(IndeedZyteAPI1Spider)
+process.crawl(IndeedZyteAPISpider)
 process.start()
