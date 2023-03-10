@@ -50,7 +50,8 @@ class IndeedZyteAPI1Spider(scrapy.Spider):
 
         # Loop over every page until all job listings are crawled
         page_counter = 1
-        for i in range(0, for_loop_end_range + page_index_step, page_index_step):
+        # for i in range(0, for_loop_end_range + page_index_step, page_index_step):
+        for i in range(0, 10, page_index_step):
             logging.info(f"Crawling page number {page_counter} with index {i}")
             listing_page_url = IndeedZyteAPI1Spider.base_url + f"&start={i}"
             yield scrapy.Request(
@@ -168,4 +169,4 @@ full_settings_dict.update({
 })
 process = CrawlerProcess(settings=full_settings_dict)
 process.crawl(IndeedZyteAPI1Spider)
-process.start(stop_after_crawl=False)
+process.start()
