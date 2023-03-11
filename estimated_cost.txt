@@ -1,3 +1,10 @@
 1762 (let's say 1800) records from Indeed --> 0.0005 per record = 0.9 per day
 924 (let's say 1000) records from Google --> 0.001841 per record = 1.841 per day
 Total cost per month = 2.741 x 30 = $82.23 (let's say $100)
+
+# Things to take care of when deploying the code to the cloud
+1. Adjust the for loop so you can test the code
+2. Adjust the directory of credentials to refer to the home page "/home/omarmoataz6/bq_credentials.json"
+3. Move spiders to be with the other scripts not in the spiders folder
+4. Create a .env file containing the Zyte API key
+5. Set the crontab file (cd indeed_crawler/indeed && python3 indeed_zyte_api.py && python3 google_company_phone_number.py && python3 post_crawling.py)
