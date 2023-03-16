@@ -145,7 +145,7 @@ class IndeedZyteAPISpider(scrapy.Spider):
             job_type = ', '.join(job_type)
 
         # Job description
-        job_description = response.xpath("//div[@id='jobDescriptionText']//text()").getall()
+        job_description = response.css("#jobDescriptionText *::text").getall() # Can also be response.xpath("//div[@id='jobDescriptionText']//text()").getall()
         if job_description is not None:
             job_description = [job.strip() for job in job_description]
             job_description = [i for i in job_description if i not in [""]]
