@@ -151,7 +151,7 @@ def post_crawling_func():
     logging.info("Uploading results to BQ")
     # Upload the results to bigquery
     # First, set the credentials
-    key_path_local = os.getcwd() + "/bq_credentials.json"
+    key_path_local = os.path.expanduser("~") + "/bq_credentials.json"
     credentials = service_account.Credentials.from_service_account_file(
         key_path_local, scopes=["https://www.googleapis.com/auth/cloud-platform"],
     )
@@ -201,7 +201,7 @@ def post_crawling_func():
 
     # Step 16: Send success E-mail
     logging.info("Sending success E-mail\n")
-    yag = yagmail.SMTP("omarmoataz6@gmail.com", oauth2_file=os.getcwd() + "/email_authentication.json")
+    yag = yagmail.SMTP("omarmoataz6@gmail.com", oauth2_file=os.path.expanduser("~") + "/email_authentication.json")
     contents = [
         f"This is an automatic notification to inform you that the Indeed crawler ran successfully"
     ]
