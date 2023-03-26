@@ -16,16 +16,37 @@ class GoogleSpider(scrapy.Spider):
     name = 'google_spider'
     
     def start_requests(self):
+        # Insert a new line for logging
+        logging.info("\n")
+
         # Open the JSON files containing the company names
         with open(file=f"{output_file_name_of_indeed_crawler}.json", mode="r", encoding="utf-8") as f:
             df_crawler = json.load(f)
             df_crawler = pd.DataFrame(df_crawler)
             f.close()
+        
+        # Open the master JSON file containing the company phone numbers that were crawled before. This is where we will get the companies that we should NOT crawl again
+        with open(file=f"output_phone_numbers_master.json", mode="r", encoding="utf-8") as f:
+            df_phone_master = json.load(f)
+            df_phone_master = pd.DataFrame(df_phone_master)
+            f.close()
 
         # Pull the distinct company names from the data frame and convert them to a list
         df_company_names = df_crawler["company_name"].unique().tolist()
 
-        for i in df_company_names:
+        # Pull the distinct company names from the JSON file containing the phone numbers that were crawled before
+        df_company_names_master = df_phone_master["company_name"].unique().tolist()
+
+        # Create a list of the companies that will be crawled. This prevents duplication and optimizes cost
+        final_company_list = []
+        for i in df_company_names: # The list that was crawled today
+            if i not in df_company_names_master: # The list that was crawled before
+                final_company_list.append(i)
+        
+        # Print a message showing the companies that will be crawled
+        logging.info(f"The final list of companies that will be crawled is: {final_company_list}")
+
+        for i in final_company_list:
             search_query = "https://www.google.com/search?hl=en&lr=lang_en&q=" + i.replace(" ", "+") + "+" + "phone+number+in+Toronto%2C+Canada"
             logging.info(f"Send a request to Google with the following search query --> {search_query}")
             yield scrapy.Request(
@@ -54,11 +75,25 @@ class GoogleSpider(scrapy.Spider):
             else:
                 phone_number = None
 
-        yield {
+        output_dict = {
             "company_name": response.meta["company_name"],
             "search_query": response.meta["search_query"],
             "phone_number": phone_number
         }
+
+        yield output_dict
+
+        # First, open the master JSON file containing the phone numbers to load the data and extend it by "output_dict"
+        with open(file="output_phone_numbers_master.json", mode="r", encoding="utf-8") as f:
+            new_phone_numbers = json.load(f)
+            new_phone_numbers.extend([output_dict])
+            f.close()
+
+        # Append "new_phone_numbers" to the newly crawled phone numbers to "output_phone_numbers_master.json"
+        with open(file="output_phone_numbers_master.json", mode="w", encoding="utf-8") as f:
+            json.dump(obj=new_phone_numbers, fp=f, ensure_ascii=False, indent=0)
+            f.close()
+
 
 # Run the spider
 full_settings_dict = custom_settings_zyte_api_dict.copy()
