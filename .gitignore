@@ -8,3 +8,4 @@ email_authentication.json
 *.gsheet
 *.mp4
 __pycache__
+*.png

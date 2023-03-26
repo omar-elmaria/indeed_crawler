@@ -76,6 +76,7 @@ def post_crawling_func():
     )
     from google.cloud import bigquery
     from google.oauth2 import service_account
+    import gspread
     import yagmail
     from datetime import datetime
     import logging
@@ -120,9 +121,15 @@ def post_crawling_func():
     ###-------------------------------END OF PHONE NUMBER ADDITION PART------------------------------###
 
     # Add the company's industry to the data frame based on the company's name
-    # First, read the CSV file containing the company names and indstries
-    logging.info("Opening the company_industry_list CSV file and applying some cleaning rules to the company_name column")
-    companies = pd.read_csv("company_industry_list.csv")
+    # First, read the Google Sheet containing the company names and indstries
+    logging.info("Opening the company_industry_list Google Sheet and applying some cleaning rules to the company_name column")
+    SHEET_ID = '1uxieppTDNYfHLOJ5F1NiJF5SRQTAAX7r3Y5NNJlcxLM'
+    SHEET_NAME = 'companies'
+    gc = gspread.service_account(os.path.expanduser("~") + "/bq_credentials.json")
+    spreadsheet = gc.open_by_key(SHEET_ID)
+    worksheet = spreadsheet.worksheet(SHEET_NAME)
+    rows = worksheet.get_all_records()
+    companies = pd.DataFrame(rows)
 
     # Filter out NULL values
     companies = companies[companies["company_name"].notnull()]
@@ -151,7 +158,7 @@ def post_crawling_func():
     logging.info("Uploading results to BQ")
     # Upload the results to bigquery
     # First, set the credentials
-    key_path_local = os.getcwd() + "/bq_credentials.json"
+    key_path_local = os.path.expanduser("~") + "/bq_credentials.json"
     credentials = service_account.Credentials.from_service_account_file(
         key_path_local, scopes=["https://www.googleapis.com/auth/cloud-platform"],
     )
@@ -201,7 +208,7 @@ def post_crawling_func():
 
     # Step 16: Send success E-mail
     logging.info("Sending success E-mail\n")
-    yag = yagmail.SMTP("omarmoataz6@gmail.com", oauth2_file=os.getcwd() + "/email_authentication.json")
+    yag = yagmail.SMTP("omarmoataz6@gmail.com", oauth2_file=os.path.expanduser("~") + "/email_authentication.json")
     contents = [
         f"This is an automatic notification to inform you that the Indeed crawler ran successfully"
     ]
