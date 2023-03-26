@@ -18,6 +18,9 @@ class IndeedZyteAPISpider(scrapy.Spider):
     name = 'indeed_zyte_api'
     
     def start_requests(self):
+        # Insert a new line for logging
+        logging.info("\n")
+
         urls = [
             "https://ca.indeed.com/jobs?l=Greater+Toronto+Area%2C+ON&sc=0kf%3Aocc%286YCJB%29%3B&radius=35&sort=date&vjk=f55ce01235a88065", # URL 1
             "https://ca.indeed.com/jobs?q=Human&l=Greater+Toronto+Area%2C+ON&radius=100&sort=date&vjk=5bd4496580222855" # URL 2
