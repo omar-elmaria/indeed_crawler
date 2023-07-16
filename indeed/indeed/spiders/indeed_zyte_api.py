@@ -35,7 +35,7 @@ class IndeedZyteAPISpider(scrapy.Spider):
 
     def parse(self, response):
         # Extract the total number of jobs as a string
-        num_jobs = response.xpath("//div[@class='jobsearch-JobCountAndSortPane-jobCount']/span/text()").get()
+        num_jobs = response.xpath("//div[contains(@class, 'jobsearch-JobCountAndSortPane-jobCount')]/span/text()").get()
         logging.info(f"The total number of jobs under the URL of {response.meta['crawler_name']}: {num_jobs}")
 
         # Extract the number of jobs as an integer
@@ -80,12 +80,6 @@ class IndeedZyteAPISpider(scrapy.Spider):
                 continue
             else:
                 # Clean the crawled fields
-                # company_indeed_url
-                try:
-                    company_indeed_url = "https://ca.indeed.com" + li.xpath(".//span[@class='companyName']/a/@href").get()
-                except TypeError: # If the XPATH yields a NULL value, it cannot be concatenated to a string
-                    company_indeed_url = None
-
                 # job_indeed_url
                 try:
                     job_indeed_url = "https://ca.indeed.com" + li.xpath(".//h2[contains(@class, 'jobTitle')]/a/span/../@href").get()
@@ -119,7 +113,6 @@ class IndeedZyteAPISpider(scrapy.Spider):
                     "job_title_name": job_title_name,
                     "job_indeed_url": job_indeed_url,
                     "company_name": company_name,
-                    "company_indeed_url": company_indeed_url,
                     "city": city,
                     "remote": remote,
                     "salary": salary,
@@ -136,7 +129,12 @@ class IndeedZyteAPISpider(scrapy.Spider):
         
     def parse_job_page(self, response):
         logging.info(f"Crawling data from the job page under the URL of {response.meta['crawler_name']} for {response.meta['job_title_name']} in the {response.meta['company_name']} company using this URL --> {response.meta['job_indeed_url']}")
-        job_type = response.xpath("//div[text()='Job type']//following-sibling::div/text()").getall()
+        
+        # company_indeed_url
+        company_indeed_url = response.xpath("//div[@data-testid='inlineHeader-companyName']/a/@href").get()
+        
+        # Job type
+        job_type = response.xpath("//div[text()='Job type']//following-sibling::div//text()").getall()
         if job_type is not None:
             # Remove unwanted keywords from the job_type list
             wanted_job_types = ["Full-time", "Permanent", "Contract", "Part-time", "Temporary", "Apprenticeship", "Internship", "Internship / Co-op", "Casual", "Freelance", "Fixed term contract"]
@@ -159,7 +157,7 @@ class IndeedZyteAPISpider(scrapy.Spider):
             "job_title_name": response.meta["job_title_name"],
             "job_type": job_type,
             "company_name": response.meta["company_name"],
-            "company_indeed_url": response.meta["company_indeed_url"],
+            "company_indeed_url": company_indeed_url,
             "city": response.meta["city"],
             "remote": response.meta["remote"],
             "salary": response.meta["salary"],
