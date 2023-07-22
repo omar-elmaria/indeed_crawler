@@ -9,3 +9,4 @@ email_authentication.json
 *.mp4
 __pycache__
 *.png
+output_phone_numbers_master_vm_20230722.json
