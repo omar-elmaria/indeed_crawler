@@ -72,7 +72,8 @@ class IndeedZyteAPISpider(scrapy.Spider):
 
     def parse_listing_page(self, response):
         # Number of Listings
-        listings = response.xpath("//ul[@class='jobsearch-ResultsList css-0']/li/div[not(contains(@id, 'mosaic'))]")
+        # Old listings selector (18-08-2023): //ul[@class='jobsearch-ResultsList css-0']/li/div[not(contains(@id, 'mosaic'))]
+        listings = response.xpath("//div[@id='mosaic-provider-jobcards']/ul/li/div[not(contains(@id, 'mosaic'))]")
         for li in listings:
             job_title_name = li.xpath(".//h2[contains(@class, 'jobTitle')]/a/span/text()").get()
             if job_title_name is None: # Sometimes, the the HTML content under "li" is NULL. If this is the case, don't add anything to the "output_dict"
