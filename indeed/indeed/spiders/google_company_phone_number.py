@@ -59,7 +59,7 @@ class GoogleSpider(scrapy.Spider):
             # Using the Indeed domain belonging to the company name, create a search query for Google
             domain = df_company_domain[df_company_domain["company_name"] == i]["domain"].values[0]
             if domain == "de":
-                search_query_suffix = "phone+number+in+Germany"
+                search_query_suffix = "Telefonnummer+in+Deutschland"
             elif domain == "ca":
                 search_query_suffix = "phone+number+in+Toronto%2C+Canada"
             
