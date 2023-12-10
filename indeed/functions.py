@@ -6,50 +6,74 @@ def salary_type_func(salary):
     if salary is None:
         return None
     else:
-        if salary.find("year") != -1:
+        if re.findall("year|jahr", salary.lower()) != []:
             return "year"
-        elif salary.find("hour") != -1:
+        elif re.findall("hour|stunde", salary.lower()) != []:
             return "hour"
-        elif salary.find("month") != -1:
+        elif re.findall("month|monat", salary.lower()) != []:
             return "month"
-        elif salary.find("week") != -1:
+        elif re.findall("week|woche", salary.lower()) != []:
             return "week"
-        elif salary.find("day") != -1:
+        elif re.findall("day|tag", salary.lower()) != []:
             return "day"
         else:
             return None
 
 # Define a function that return the higher end of the salary
-def salary_high_func(salary, salary_type):
+def salary_high_func(salary, salary_type, indeed_domain):
     if salary is None:
         return None
     else:
-        if salary.find("–") != -1: # Type 1: $55,000–$62,000 a year
-            return float(re.findall(pattern=f"(?<=–\$).*(?=\sa\s{salary_type}|\san\s{salary_type})", string=salary)[0].replace(",", ""))
-        elif salary.find("From") != -1: # Type 2: From $80,000 a year
-            return None
-        elif salary.find("Up") != -1: # Type 3: Up to $160,000 a year
-            return float(re.findall(pattern=f"(?<=Up\sto\s\$).*(?=\sa\s{salary_type}|\san\s{salary_type})", string=salary)[0].replace(",", ""))
-        elif any(x in salary for x in ["-", "From", "Up"]) == False: # Type 4: $150,000 a year
-            return float(re.findall(pattern=f"(?<=\$).*(?=\sa\s{salary_type}|\san\s{salary_type})", string=salary)[0].replace(",", ""))
-        else:
-            return None
+        if indeed_domain == "ca":
+            if salary.find("–") != -1: # Type 1: $55,000–$62,000 a year
+                return float(re.findall(pattern=f"(?<=–\$).*(?=\sa\s{salary_type}|\san\s{salary_type})", string=salary)[0].replace(",", ""))
+            elif salary.find("From") != -1: # Type 2: From $80,000 a year
+                return None
+            elif salary.find("Up") != -1: # Type 3: Up to $160,000 a year
+                return float(re.findall(pattern=f"(?<=Up\sto\s\$).*(?=\sa\s{salary_type}|\san\s{salary_type})", string=salary)[0].replace(",", ""))
+            elif any(x in salary for x in ["-", "From", "Up"]) == False: # Type 4: $150,000 a year
+                return float(re.findall(pattern=f"(?<=\$).*(?=\sa\s{salary_type}|\san\s{salary_type})", string=salary)[0].replace(",", ""))
+            else:
+                return None
+        elif indeed_domain == "de":
+            if salary.find("–") != -1: # Type 1: 28.500 € – 37.000 € pro Jahr
+                return float(re.findall(pattern=f"(?<=–\s).*(?=\s€\spro\s{salary_type.lower()})", string=salary)[0].replace(",", ".").replace(".", ""))
+            elif salary.lower().find("ab") != -1: # Type 2: Ab 40.000 € pro Jahr
+                return None
+            elif salary.lower().find("bis") != -1: # Type 3: Bis 60.000 € pro Jahr
+                return float(re.findall(pattern=f"(?<=bis\s).*(?=\s€\spro\s{salary_type.lower()})", string=salary)[0].replace(",", ".").replace(".", ""))
+            elif any(x in salary for x in ["-", "ab", "bis"]) == False: # Type 4: 39.000 € pro Jahr
+                return float(re.findall(pattern=f".*(?=\s€\spro\s{salary_type.lower()})", string=salary)[0].replace(",", ".").replace(".", ""))
+            else:
+                return None
 
 # Define a function that returns the lower end of the salary
-def salary_low_func(salary, salary_type):
+def salary_low_func(salary, salary_type, indeed_domain):
     if salary is None:
         return None
     else:
-        if salary.find("–") != -1: # Type 1: $55,000–$62,000 a year
-            return float(re.findall(pattern="(?<=\$).*(?=\–\$)", string=salary)[0].replace(",", ""))
-        elif salary.find("From") != -1: # Type 2: From $80,000 a year
-            return float(re.findall(pattern=f"(?<=From\s\$).*(?=\sa\s{salary_type}|\san\s{salary_type})", string=salary)[0].replace(",", ""))
-        elif salary.find("Up") != -1: # Type 3: Up to $160,000 a year
-            return None
-        elif any(x in salary for x in ["-", "From", "Up"]) is False: # Type 4: $150,000 a year
-            return float(re.findall(pattern=f"(?<=\$).*(?=\sa\s{salary_type}|\san\s{salary_type})", string=salary)[0].replace(",", ""))
-        else:
-            return None
+        if indeed_domain == "ca":
+            if salary.find("–") != -1: # Type 1: $55,000–$62,000 a year
+                return float(re.findall(pattern="(?<=\$).*(?=\–\$)", string=salary)[0].replace(",", ""))
+            elif salary.find("From") != -1: # Type 2: From $80,000 a year
+                return float(re.findall(pattern=f"(?<=From\s\$).*(?=\sa\s{salary_type}|\san\s{salary_type})", string=salary)[0].replace(",", ""))
+            elif salary.find("Up") != -1: # Type 3: Up to $160,000 a year
+                return None
+            elif any(x in salary for x in ["-", "From", "Up"]) is False: # Type 4: $150,000 a year
+                return float(re.findall(pattern=f"(?<=\$).*(?=\sa\s{salary_type}|\san\s{salary_type})", string=salary)[0].replace(",", ""))
+            else:
+                return None
+        elif indeed_domain == "de":
+            if salary.find("–") != -1: # Type 1: 28.500 € – 37.000 € pro Jahr
+                return float(re.findall(pattern=f".*(?=\s€\s–)", string=salary)[0].replace(",", ".").replace(".", ""))
+            elif salary.lower().find("ab") != -1: # Type 2: Ab 40.000 € pro Jahr
+                return float(re.findall(pattern=f"(?<=ab\s).*(?=\s€\spro\s{salary_type.lower()})", string=salary)[0].replace(",", ".").replace(".", ""))
+            elif salary.lower().find("bis") != -1: # Type 3: Bis 60.000 € pro Jahr
+                return None
+            elif any(x in salary for x in ["-", "ab", "bis"]) == False: # Type 4: 39.000 € pro Jahr
+                return float(re.findall(pattern=f".*(?=\s€\spro\s{salary_type.lower()})", string=salary)[0].replace(",", ".").replace(".", ""))
+            else:
+                return None
 
 # Define a function that loops through the entire company list and searches for industry matches
 def company_name_finder_func(x, companies_df):
@@ -100,8 +124,8 @@ def post_crawling_func():
 
     # Create the columns containing the salary bands
     logging.info("Create the columns containing the salary bands")
-    df["salary_low"] = df[["salary", "salary_type"]].apply(lambda x: salary_low_func(*x), axis=1)
-    df["salary_high"] = df.apply(lambda x: salary_high_func(x["salary"], x["salary_type"]), axis=1)
+    df["salary_low"] = df.apply(lambda x: salary_low_func(x["salary"], x["salary_type"], re.findall("(?<=https:\/\/).*(?=\.indeed)", x["job_page_url"])[0]), axis=1)
+    df["salary_high"] = df.apply(lambda x: salary_high_func(x["salary"], x["salary_type"], re.findall("(?<=https:\/\/).*(?=\.indeed)", x["job_page_url"])[0]), axis=1)
 
     # Change the data type of crawled_timestamp to datetime
     df["crawled_timestamp"] = df["crawled_timestamp"].apply(lambda x: pd.to_datetime(x))
@@ -170,6 +194,7 @@ def post_crawling_func():
             # Fields from the main indeed crawler
             bigquery.SchemaField("job_title_name", "STRING"),
             bigquery.SchemaField("job_type", "STRING"),
+            bigquery.SchemaField("shift_and_schedule", "STRING"),
             bigquery.SchemaField("company_name", "STRING"),
             bigquery.SchemaField("company_indeed_url", "STRING"),
             bigquery.SchemaField("city", "STRING"),
@@ -212,4 +237,4 @@ def post_crawling_func():
     contents = [
         f"This is an automatic notification to inform you that the Indeed crawler ran successfully"
     ]
-    yag.send(["omarmoataz6@gmail.com", "chris@beginrecruitment.com"], f"The Indeed crawler ran successfully at {datetime.now()} CET", contents)
+    yag.send(["omarmoataz6@gmail.com"], f"The Indeed crawler ran successfully at {datetime.now()} CET", contents)
