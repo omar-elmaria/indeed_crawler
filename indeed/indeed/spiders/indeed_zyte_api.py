@@ -151,15 +151,24 @@ class IndeedZyteAPISpider(scrapy.Spider):
 
         # Salary (sometimes, the salary is not available on the job page, so we need to use the salary from the job page itself)
         if response.meta["salary"] is None:
-            salary = response.xpath("//div[text()='Gehalt']/following-sibling::div//text() | //div[text()='Pay']/following-sibling::div//text()").get()
+            salary = response.xpath("//div[text()='Gehalt']/following-sibling::div//div[contains(text(), 'pro')]//text() | //div[text()='Pay']/following-sibling::div//div[contains(text(), 'a')]//text()").get()
         else:
             salary = None
 
         # Shift and schedule
-        shift_and_schedule = response.xpath("//div[text()='Schichten und Arbeitszeiten']/following-sibling::div//text() | //div[text()='Shift and schedule']/following-sibling::div//text()").getall()
+        shift_and_schedule = response.xpath("//div[text()='Schichten und Arbeitszeiten']/following-sibling::div//div//text() | //div[text()='Shift and schedule']/following-sibling::div//div//text()").getall()
         if shift_and_schedule is not None:
+            # Remove unwanted keywords from the shift_and_schedule list
+            wanted_shift_types = [
+                # German
+                "Montag bis Freitag", "Wochenendarbeit möglich", "Frühschicht", "Spätschicht", "Tagschicht", "Nachtschicht", "Keine Wochenenden", "8-Stunden-Schicht", "Feiertagsarbeit", "Abendschicht", "Gleitzeit"
+            ]
+            
+            # Collect a list of job types in a list 
+            shift_type = [sh for sh in shift_and_schedule if(sh in wanted_shift_types)]
+
             # Join the elements of the list to form a string and separate them with a comma
-            shift_and_schedule = ', '.join(shift_and_schedule)
+            shift_and_schedule = ', '.join(shift_type)
 
         # Job type
         job_type = response.xpath("//div[text()='Anstellungsart']//following-sibling::div//text() | //div[text()='Job type']//following-sibling::div//text()").getall()
