@@ -34,7 +34,7 @@ class GoogleSpider(scrapy.Spider):
         # Pull the distinct combinations of company names and Indeed domain
         df_company_domain = df_crawler[["company_name", "job_page_url"]].drop_duplicates()
         # Pull the domain from the job page URL
-        df_company_domain["job_page_url"] = df_company_domain["job_page_url"].apply(lambda x: re.findall("(?<=https:\/\/).*(?=\.indeed)", x["job_page_url"]))
+        df_company_domain["job_page_url"] = df_company_domain["job_page_url"].apply(lambda x: re.findall(pattern="(?<=https:\/\/).*(?=\.indeed)", string=x)[0])
         # Rename the job_page_url column to domain
         df_company_domain = df_company_domain.rename(columns={"job_page_url": "domain"})
         # Drop duplicates again so you have unique combinations of company names and Indeed domain
