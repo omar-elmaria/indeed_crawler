@@ -12,7 +12,7 @@ from math import ceil
 import logging
 from datetime import datetime
 from scrapy.crawler import CrawlerProcess
-
+from urllib.parse import urljoin
 
 class IndeedZyteAPISpider(scrapy.Spider):
     name = 'indeed_zyte_api'
@@ -22,8 +22,14 @@ class IndeedZyteAPISpider(scrapy.Spider):
         logging.info("\n")
 
         urls = [
-            "https://ca.indeed.com/jobs?l=Greater+Toronto+Area%2C+ON&sc=0kf%3Aocc%286YCJB%29%3B&radius=35&sort=date&vjk=f55ce01235a88065", # URL 1
-            "https://ca.indeed.com/jobs?q=Human&l=Greater+Toronto+Area%2C+ON&radius=100&sort=date&vjk=5bd4496580222855" # URL 2
+            # Canada
+            # "https://ca.indeed.com/jobs?l=Greater+Toronto+Area%2C+ON&sc=0kf%3Aocc%286YCJB%29%3B&radius=35&sort=date&vjk=f55ce01235a88065", # URL 1
+            # "https://ca.indeed.com/jobs?q=Human&l=Greater+Toronto+Area%2C+ON&radius=100&sort=date&vjk=5bd4496580222855", # URL 2
+
+            # Germany
+            "https://de.indeed.com/jobs?q=Circular%20Economy&l=Deutschland&filter=0", # URL 1
+            "https://de.indeed.com/jobs?q=Circularity&l=Deutschland&filter=0&vjk=17f1151bb19093cb", # URL 2
+            "https://de.indeed.com/jobs?q=Kreislaufwirtschaft&l=Deutschland&filter=0&vjk=5811fd5a06ed88c4" # URL 3
         ]
 
         for idx, i in enumerate(urls):
@@ -83,25 +89,34 @@ class IndeedZyteAPISpider(scrapy.Spider):
                 # Clean the crawled fields
                 # job_indeed_url
                 try:
-                    job_indeed_url = "https://ca.indeed.com" + li.xpath(".//h2[contains(@class, 'jobTitle')]/a/span/../@href").get()
+                    job_indeed_url = urljoin(response.url, li.xpath(".//h2[contains(@class, 'jobTitle')]/a/span/../@href").get())
                 except TypeError:
                     job_indeed_url = None
                 
                 # company_name. Sometimes the company name exists with or without a URL, so we need two selectors
-                company_name_with_url = li.xpath(".//span[@class='companyName']/a/text()").get()
-                company_name_wout_url = li.xpath(".//span[@class='companyName']/text()").get()
+                company_name_with_url = li.xpath(".//span[@data-testid='company-name']/a/text()").get()
+                company_name_wout_url = li.xpath(".//span[@data-testid='company-name']/text()").get()
                 company_name = company_name_with_url if company_name_with_url is not None else company_name_wout_url
 
                 # city and remote
-                city = li.xpath(".//div[@class='companyLocation']/text()").get()
-                unwanted_words = ["Temporarily Remote in ", "Remote in ", "Hybrid remote in "]
-                if bool([wo for wo in unwanted_words if(wo in city)]): # If TRUE (i.e., if an unwanted sub-string exists in city, remove it from the main string, which is city) 
-                    # Set the remote variable to the value of the unwanted word
-                    remote = re.findall(pattern=".*(?=\sin\s)", string=city)[0]
+                city = li.xpath(".//div[@data-testid='text-location']/text()").get()
+                unwanted_words = [
+                    # Canada
+                    "Temporarily Remote in ", "Remote in ", "Hybrid remote in ",
+                    
+                    # Germany
+                    "Zum Teil im Homeoffice in", "Homeoffice in"
+                ]
+                if city is not None:
+                    if bool([wo for wo in unwanted_words if(wo in city)]): # If TRUE (i.e., if an unwanted sub-string exists in city, remove it from the main string, which is city) 
+                        # Set the remote variable to the value of the unwanted word
+                        remote = re.findall(pattern=".*(?=\sin\s)", string=city)[0]
 
-                    # Remove the unwanted word from city
-                    for wo in unwanted_words:
-                        city = re.sub(wo, "", city)
+                        # Remove the unwanted word from city
+                        for wo in unwanted_words:
+                            city = re.sub(wo, "", city)
+                    else:
+                        remote = None
                 else:
                     remote = None
                 
@@ -132,13 +147,40 @@ class IndeedZyteAPISpider(scrapy.Spider):
         logging.info(f"Crawling data from the job page under the URL of {response.meta['crawler_name']} for {response.meta['job_title_name']} in the {response.meta['company_name']} company using this URL --> {response.meta['job_indeed_url']}")
         
         # company_indeed_url
-        company_indeed_url = response.xpath("//div[@data-testid='inlineHeader-companyName']/a/@href").get()
-        
+        company_indeed_url = response.xpath("//div[@data-testid='inlineHeader-companyName']//a/@href").get()
+
+        # Salary (sometimes, the salary is not available on the job page, so we need to use the salary from the job page itself)
+        if response.meta["salary"] is None:
+            salary = response.xpath("//div[text()='Gehalt']/following-sibling::div//div[contains(text(), 'pro')]//text() | //div[text()='Pay']/following-sibling::div//div[contains(text(), 'a')]//text()").get()
+        else:
+            salary = None
+
+        # Shift and schedule
+        shift_and_schedule = response.xpath("//div[text()='Schichten und Arbeitszeiten']/following-sibling::div//div//text() | //div[text()='Shift and schedule']/following-sibling::div//div//text()").getall()
+        if shift_and_schedule is not None:
+            # Remove unwanted keywords from the shift_and_schedule list
+            wanted_shift_types = [
+                # German
+                "Montag bis Freitag", "Wochenendarbeit möglich", "Frühschicht", "Spätschicht", "Tagschicht", "Nachtschicht", "Keine Wochenenden", "8-Stunden-Schicht", "Feiertagsarbeit", "Abendschicht", "Gleitzeit"
+            ]
+            
+            # Collect a list of job types in a list 
+            shift_type = [sh for sh in shift_and_schedule if(sh in wanted_shift_types)]
+
+            # Join the elements of the list to form a string and separate them with a comma
+            shift_and_schedule = ', '.join(shift_type)
+
         # Job type
-        job_type = response.xpath("//div[text()='Job type']//following-sibling::div//text()").getall()
+        job_type = response.xpath("//div[text()='Anstellungsart']//following-sibling::div//text() | //div[text()='Job type']//following-sibling::div//text()").getall()
         if job_type is not None:
             # Remove unwanted keywords from the job_type list
-            wanted_job_types = ["Full-time", "Permanent", "Contract", "Part-time", "Temporary", "Apprenticeship", "Internship", "Internship / Co-op", "Casual", "Freelance", "Fixed term contract"]
+            wanted_job_types = [
+                # English
+                "Full-time", "Permanent", "Contract", "Part-time", "Temporary", "Apprenticeship", "Internship", "Internship / Co-op", "Casual", "Freelance", "Fixed term contract",
+
+                # German
+                "Festanstellung", "Teilzeit", "Vollzeit", "Ausbildung", "Befristet", "Praktikum", "Minijob", "Freie Mitarbeit"
+            ]
             
             # Collect a list of job types in a list 
             job_type = [job for job in job_type if(job in wanted_job_types)]
@@ -157,11 +199,12 @@ class IndeedZyteAPISpider(scrapy.Spider):
             # Job page fields
             "job_title_name": response.meta["job_title_name"],
             "job_type": job_type,
+            "shift_and_schedule": shift_and_schedule,
             "company_name": response.meta["company_name"],
             "company_indeed_url": company_indeed_url,
             "city": response.meta["city"],
             "remote": response.meta["remote"],
-            "salary": response.meta["salary"],
+            "salary": salary,
             "crawled_page_rank": response.meta["crawled_page_rank"],
             "job_page_url": response.meta["job_indeed_url"],
             "listing_page_url": response.meta["listing_page_url"],

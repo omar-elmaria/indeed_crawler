@@ -29,7 +29,8 @@ custom_settings_zyte_api_dict.update({
     "ZYTE_API_KEY": os.getenv("ZYTE_API_KEY"),
     "ZYTE_API_LOG_REQUESTS": True,
     "ZYTE_API_TRANSPARENT_MODE": True,
-    "ZYTE_API_SKIP_HEADERS": ["Cookie", "User-Agent"]
+    "ZYTE_API_SKIP_HEADERS": ["Cookie", "User-Agent"],
+    "ZYTE_API_RETRY_POLICY": "retry_policies.CUSTOM_RETRY_POLICY"
 })
 
 # Scraper API prefix and suffix
@@ -39,7 +40,7 @@ suffix = ""
 # Global Inputs
 num_listings_per_page = 15
 page_index_step = 10
-page_index_max = 540
+page_index_max = 620
 output_file_name_of_indeed_crawler = "output_indeed_zyte_api"
 output_file_name_of_google_crawler = "output_phone_numbers"
 output_name_of_indeed_logs_file = "indeed_zyte_api"

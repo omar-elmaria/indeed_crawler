@@ -31,6 +31,15 @@ class GoogleSpider(scrapy.Spider):
             df_phone_master = pd.DataFrame(df_phone_master)
             f.close()
 
+        # Pull the distinct combinations of company names and Indeed domain
+        df_company_domain = df_crawler[["company_name", "job_page_url"]].drop_duplicates()
+        # Pull the domain from the job page URL
+        df_company_domain["job_page_url"] = df_company_domain["job_page_url"].apply(lambda x: re.findall(pattern="(?<=https:\/\/).*(?=\.indeed)", string=x)[0])
+        # Rename the job_page_url column to domain
+        df_company_domain = df_company_domain.rename(columns={"job_page_url": "domain"})
+        # Drop duplicates again so you have unique combinations of company names and Indeed domain
+        df_company_domain = df_company_domain.drop_duplicates()
+        
         # Pull the distinct company names from the data frame and convert them to a list
         df_company_names = df_crawler["company_name"].unique().tolist()
 
@@ -47,7 +56,15 @@ class GoogleSpider(scrapy.Spider):
         logging.info(f"The final list of companies that will be crawled is: {final_company_list}")
 
         for i in final_company_list:
-            search_query = "https://www.google.com/search?hl=en&lr=lang_en&q=" + i.replace(" ", "+") + "+" + "phone+number+in+Toronto%2C+Canada"
+            # Using the Indeed domain belonging to the company name, create a search query for Google
+            domain = df_company_domain[df_company_domain["company_name"] == i]["domain"].values[0]
+            if domain == "de":
+                search_query_suffix = "Telefonnummer+in+Deutschland"
+            elif domain == "ca":
+                search_query_suffix = "phone+number+in+Toronto%2C+Canada"
+            
+            # Create the search query
+            search_query = "https://www.google.com/search?hl=en&lr=lang_en&q=" + i.replace(" ", "+") + "+" + search_query_suffix
             logging.info(f"Send a request to Google with the following search query --> {search_query}")
             yield scrapy.Request(
                 url=search_query,
