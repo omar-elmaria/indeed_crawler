@@ -2,20 +2,35 @@ import re
 
 # HELPER FUNCTIONS
 # Format the salary column by creating a function that splits the salary string intro two columns
-def salary_type_func(salary):
+def salary_type_func(salary, domain):
     if salary is None:
         return None
     else:
         if re.findall("year|jahr", salary.lower()) != []:
-            return "year"
+            if domain == "ca":
+                return "year"
+            elif domain == "de":
+                return "jahr"
         elif re.findall("hour|stunde", salary.lower()) != []:
-            return "hour"
+            if domain == "ca":
+                return "hour"
+            elif domain == "de":
+                return "stunde"
         elif re.findall("month|monat", salary.lower()) != []:
-            return "month"
+            if domain == "ca":
+                return "month"
+            elif domain == "de":
+                return "monat"
         elif re.findall("week|woche", salary.lower()) != []:
-            return "week"
+            if domain == "ca":
+                return "week"
+            elif domain == "de":
+                return "woche"
         elif re.findall("day|tag", salary.lower()) != []:
-            return "day"
+            if domain == "ca":
+                return "tag"
+            elif domain == "de":
+                return "day"
         else:
             return None
 
@@ -31,21 +46,23 @@ def salary_high_func(salary, salary_type, indeed_domain):
                 return None
             elif salary.find("Up") != -1: # Type 3: Up to $160,000 a year
                 return float(re.findall(pattern=f"(?<=Up\sto\s\$).*(?=\sa\s{salary_type}|\san\s{salary_type})", string=salary)[0].replace(",", ""))
-            elif any(x in salary for x in ["-", "From", "Up"]) == False: # Type 4: $150,000 a year
+            elif any(x in salary for x in ["–", "From", "Up"]) == False: # Type 4: $150,000 a year
                 return float(re.findall(pattern=f"(?<=\$).*(?=\sa\s{salary_type}|\san\s{salary_type})", string=salary)[0].replace(",", ""))
             else:
                 return None
         elif indeed_domain == "de":
             if salary.find("–") != -1: # Type 1: 28.500 € – 37.000 € pro Jahr
-                return float(re.findall(pattern=f"(?<=–\s).*(?=\s€\spro\s{salary_type.lower()})", string=salary)[0].replace(",", ".").replace(".", ""))
+                return float(re.findall(pattern=f"(?<=–\s).*(?=\s€\spro\s{salary_type})", string=salary.lower())[0].replace(",", ".").replace(".", ""))
             elif salary.lower().find("ab") != -1: # Type 2: Ab 40.000 € pro Jahr
                 return None
-            elif salary.lower().find("bis") != -1: # Type 3: Bis 60.000 € pro Jahr
-                return float(re.findall(pattern=f"(?<=bis\s).*(?=\s€\spro\s{salary_type.lower()})", string=salary)[0].replace(",", ".").replace(".", ""))
-            elif any(x in salary for x in ["-", "ab", "bis"]) == False: # Type 4: 39.000 € pro Jahr
-                return float(re.findall(pattern=f".*(?=\s€\spro\s{salary_type.lower()})", string=salary)[0].replace(",", ".").replace(".", ""))
+            elif salary.lower().find("bis zu") != -1: # Type 3: Bis 60.000 € pro Jahr
+                return float(re.findall(pattern=f"(?<=bis\szu\s).*(?=\s€\spro\s{salary_type})", string=salary.lower())[0].replace(",", ".").replace(".", ""))
+            elif any(x in salary.lower() for x in ["–", "ab", "bis zu"]) == False: # Type 4: 39.000 € pro Jahr
+                return float(re.findall(pattern=f".*(?=\s€\spro\s{salary_type})", string=salary.lower())[0].replace(",", ".").replace(".", ""))
             else:
                 return None
+        else:
+            return None
 
 # Define a function that returns the lower end of the salary
 def salary_low_func(salary, salary_type, indeed_domain):
@@ -59,7 +76,7 @@ def salary_low_func(salary, salary_type, indeed_domain):
                 return float(re.findall(pattern=f"(?<=From\s\$).*(?=\sa\s{salary_type}|\san\s{salary_type})", string=salary)[0].replace(",", ""))
             elif salary.find("Up") != -1: # Type 3: Up to $160,000 a year
                 return None
-            elif any(x in salary for x in ["-", "From", "Up"]) is False: # Type 4: $150,000 a year
+            elif any(x in salary for x in ["–", "From", "Up"]) is False: # Type 4: $150,000 a year
                 return float(re.findall(pattern=f"(?<=\$).*(?=\sa\s{salary_type}|\san\s{salary_type})", string=salary)[0].replace(",", ""))
             else:
                 return None
@@ -67,13 +84,15 @@ def salary_low_func(salary, salary_type, indeed_domain):
             if salary.find("–") != -1: # Type 1: 28.500 € – 37.000 € pro Jahr
                 return float(re.findall(pattern=f".*(?=\s€\s–)", string=salary)[0].replace(",", ".").replace(".", ""))
             elif salary.lower().find("ab") != -1: # Type 2: Ab 40.000 € pro Jahr
-                return float(re.findall(pattern=f"(?<=ab\s).*(?=\s€\spro\s{salary_type.lower()})", string=salary)[0].replace(",", ".").replace(".", ""))
-            elif salary.lower().find("bis") != -1: # Type 3: Bis 60.000 € pro Jahr
+                return float(re.findall(pattern=f"(?<=ab\s).*(?=\s€\spro\s{salary_type})", string=salary.lower())[0].replace(",", ".").replace(".", ""))
+            elif salary.lower().find("bis zu") != -1: # Type 3: Bis 60.000 € pro Jahr
                 return None
-            elif any(x in salary for x in ["-", "ab", "bis"]) == False: # Type 4: 39.000 € pro Jahr
-                return float(re.findall(pattern=f".*(?=\s€\spro\s{salary_type.lower()})", string=salary)[0].replace(",", ".").replace(".", ""))
+            elif any(x in salary.lower() for x in ["–", "ab", "bis zu"]) == False: # Type 4: 39.000 € pro Jahr
+                return float(re.findall(pattern=f".*(?=\s€\spro\s{salary_type})", string=salary.lower())[0].replace(",", ".").replace(".", ""))
             else:
                 return None
+        else:
+            return None
 
 # Define a function that loops through the entire company list and searches for industry matches
 def company_name_finder_func(x, companies_df):
@@ -118,14 +137,17 @@ def post_crawling_func():
         df = pd.DataFrame(df)
         f.close()
     
+    # Extract the domain from the job_page_url column
+    df["domain"] = df["job_page_url"].apply(lambda x: re.findall("(?<=https:\/\/).*(?=\.indeed)", x)[0] if x is not None else None)
+    
     # Apply the salary_type_func
     logging.info("Applying the salary_type func")
-    df["salary_type"] = df["salary"].apply(salary_type_func)
+    df["salary_type"] = df.apply(lambda x: salary_type_func(x["salary"], x["domain"]), axis=1)
 
     # Create the columns containing the salary bands
     logging.info("Create the columns containing the salary bands")
-    df["salary_low"] = df.apply(lambda x: salary_low_func(x["salary"], x["salary_type"], re.findall("(?<=https:\/\/).*(?=\.indeed)", x["job_page_url"])[0]), axis=1)
-    df["salary_high"] = df.apply(lambda x: salary_high_func(x["salary"], x["salary_type"], re.findall("(?<=https:\/\/).*(?=\.indeed)", x["job_page_url"])[0]), axis=1)
+    df["salary_low"] = df.apply(lambda x: salary_low_func(x["salary"], x["salary_type"], x["domain"]), axis=1)
+    df["salary_high"] = df.apply(lambda x: salary_high_func(x["salary"], x["salary_type"], x["domain"]), axis=1)
 
     # Change the data type of crawled_timestamp to datetime
     df["crawled_timestamp"] = df["crawled_timestamp"].apply(lambda x: pd.to_datetime(x))
@@ -174,8 +196,8 @@ def post_crawling_func():
     # Create a new column called "industry_match_idx". The second apply function is to pick the "industry_match_idx" from the tuple produced by the company_name_finder_func
     df["industry_match_idx"] = df.apply(lambda x: company_name_finder_func(x["company_name"], companies), axis=1).apply(lambda x: x[2])
 
-    # Move the timestamp column to the very end of the data frame
-    df[[col for col in df if col not in ["crawled_timestamp", "crawler_name"]] + ["crawled_timestamp", "crawler_name"]]
+    # Move the timestamp and domain columns to the very end of the data frame
+    df[[col for col in df if col not in ["crawled_timestamp", "crawler_name", "domain"]] + ["crawled_timestamp", "crawler_name", "domain"]]
 
     ###--------------------------------END OF INDUSTRY ADDITION PART--------------------------------###
 
@@ -220,6 +242,7 @@ def post_crawling_func():
             # Crawled timestamp
             bigquery.SchemaField("crawled_timestamp", "TIMESTAMP"),
             bigquery.SchemaField("crawler_name", "STRING"),
+            bigquery.SchemaField("domain", "STRING"),
         ]
     )
     job_config.write_disposition = bigquery.WriteDisposition.WRITE_APPEND
