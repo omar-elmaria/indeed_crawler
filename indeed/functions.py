@@ -149,6 +149,12 @@ def post_crawling_func():
     df["salary_low"] = df.apply(lambda x: salary_low_func(x["salary"], x["salary_type"], x["domain"]), axis=1)
     df["salary_high"] = df.apply(lambda x: salary_high_func(x["salary"], x["salary_type"], x["domain"]), axis=1)
 
+    # Add a new column called "plz" that contains the postal code extracted from the "city" column
+    df["plz"] = df["city"].apply(lambda x: re.findall("\d+", x) if x is not None else None).apply(lambda x: x[0] if x != [] and x is not None else None)
+
+    # Extract the city name from the composite string and remove any extra spaces from the "city" column
+    df["city"] = df["city"].apply(lambda x: re.findall("\D+", x) if x is not None else None).apply(lambda x: x[0].strip() if x != [] and x is not None else None)
+
     # Change the data type of crawled_timestamp to datetime
     df["crawled_timestamp"] = df["crawled_timestamp"].apply(lambda x: pd.to_datetime(x))
 
@@ -220,6 +226,7 @@ def post_crawling_func():
             bigquery.SchemaField("company_name", "STRING"),
             bigquery.SchemaField("company_indeed_url", "STRING"),
             bigquery.SchemaField("city", "STRING"),
+            bigquery.SchemaField("plz", "STRING"),
             bigquery.SchemaField("remote", "STRING"),
             bigquery.SchemaField("salary", "STRING"),
             bigquery.SchemaField("crawled_page_rank", "INT64"), 
@@ -250,7 +257,7 @@ def post_crawling_func():
     # Upload the table
     client.load_table_from_dataframe(
         dataframe=df,
-        destination="web-scraping-371310.crawled_datasets.chris_indeed_workflow",
+        destination="web-scraping-371310.crawled_datasets.laura_indeed_data",
         job_config=job_config
     ).result()
 

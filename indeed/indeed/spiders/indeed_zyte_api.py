@@ -92,6 +92,9 @@ class IndeedZyteAPISpider(scrapy.Spider):
                     job_indeed_url = urljoin(response.url, li.xpath(".//h2[contains(@class, 'jobTitle')]/a/span/../@href").get())
                 except TypeError:
                     job_indeed_url = None
+
+                # posted_on
+                posted_on = li.xpath(".//span[@class='date']/text()").get()
                 
                 # company_name. Sometimes the company name exists with or without a URL, so we need two selectors
                 company_name_with_url = li.xpath(".//span[@data-testid='company-name']/a/text()").get()
@@ -128,6 +131,7 @@ class IndeedZyteAPISpider(scrapy.Spider):
                     "listing_page_url": response.meta["listing_page_url"],
                     "job_title_name": job_title_name,
                     "job_indeed_url": job_indeed_url,
+                    "posted_on": posted_on,
                     "company_name": company_name,
                     "city": city,
                     "remote": remote,
@@ -207,6 +211,7 @@ class IndeedZyteAPISpider(scrapy.Spider):
             "salary": salary,
             "crawled_page_rank": response.meta["crawled_page_rank"],
             "job_page_url": response.meta["job_indeed_url"],
+            "posted_on": response.meta["posted_on"],
             "listing_page_url": response.meta["listing_page_url"],
             "job_description": job_description,
             "crawled_timestamp": datetime.now(),
