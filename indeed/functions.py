@@ -263,8 +263,8 @@ def post_crawling_func():
 
     # Step 16: Send success E-mail
     logging.info("Sending success E-mail\n")
-    yag = yagmail.SMTP("omarmoataz6@gmail.com", oauth2_file=os.path.expanduser("~") + "/email_authentication.json")
+    yag = yagmail.SMTP("omarmoataz6@gmail.com", smtp_ssl=False, oauth2_file=os.path.expanduser("~") + "/email_authentication.json")
     contents = [
         f"This is an automatic notification to inform you that the Indeed crawler ran successfully"
     ]
-    yag.send(["omarmoataz6@gmail.com"], f"The Indeed crawler ran successfully at {datetime.now()} CET", contents)
+    yag.send(["omarmoataz6@gmail.com", "laura.scherer@circuculture.com"], f"The Indeed crawler ran successfully at {datetime.now()} CET", contents)

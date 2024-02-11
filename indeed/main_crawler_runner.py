@@ -10,7 +10,7 @@ from inputs import (
 
 def main():
     # If you are not in indeed/, navigate to it
-    if "chris_begin_indeed\\indeed" not in os.getcwd():
+    if "indeed_crawler\\indeed" not in os.getcwd():
         os.chdir(os.getcwd() + "/indeed")
     
     # Configure logging
