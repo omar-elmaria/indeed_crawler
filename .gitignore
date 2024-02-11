@@ -10,3 +10,4 @@ email_authentication.json
 __pycache__
 *.png
 output_phone_numbers_master_vm_20230722.json
+.DS_Store
