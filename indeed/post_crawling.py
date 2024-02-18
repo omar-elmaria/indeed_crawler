@@ -12,7 +12,7 @@ except Exception as err:
     logging.exception(err)
     
     # Send an E-mail notifying that the error occurred
-    yag = yagmail.SMTP("omarmoataz6@gmail.com", oauth2_file=os.path.expanduser("~") + "/email_authentication.json")
+    yag = yagmail.SMTP("omarmoataz6@gmail.com", smtp_ssl=False, oauth2_file=os.path.expanduser("~") + "/email_authentication.json")
     contents = [
         error_message
     ]
