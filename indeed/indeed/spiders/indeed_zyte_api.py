@@ -94,7 +94,7 @@ class IndeedZyteAPISpider(scrapy.Spider):
                     job_indeed_url = None
 
                 # posted_on
-                posted_on = li.xpath(".//span[@class='date']/text()").get()
+                posted_on = li.xpath(".//span[@data-testid='myJobsStateDate']/text()").get()
                 
                 # company_name. Sometimes the company name exists with or without a URL, so we need two selectors
                 company_name_with_url = li.xpath(".//span[@data-testid='company-name']/a/text()").get()
@@ -155,12 +155,12 @@ class IndeedZyteAPISpider(scrapy.Spider):
 
         # Salary (sometimes, the salary is not available on the job page, so we need to use the salary from the job page itself)
         if response.meta["salary"] is None:
-            salary = response.xpath("//div[text()='Gehalt']/following-sibling::div//div[contains(text(), 'pro')]//text() | //div[text()='Pay']/following-sibling::div//div[contains(text(), 'a')]//text()").get()
+            salary = response.xpath("//div[@aria-label='Gehalt']/div/ul/li/div/@data-testid | //div[text()='Pay']/following-sibling::div//div[contains(text(), 'a')]//text()").get()
         else:
             salary = None
 
         # Shift and schedule
-        shift_and_schedule = response.xpath("//div[text()='Schichten und Arbeitszeiten']/following-sibling::div//div//text() | //div[text()='Shift and schedule']/following-sibling::div//div//text()").getall()
+        shift_and_schedule = response.xpath("//div[@aria-label='Schichten und Arbeitszeiten']/div/ul/li/div/@data-testid | //div[text()='Shift and schedule']/following-sibling::div//div//text()").getall()
         if shift_and_schedule is not None:
             # Remove unwanted keywords from the shift_and_schedule list
             wanted_shift_types = [
@@ -175,7 +175,7 @@ class IndeedZyteAPISpider(scrapy.Spider):
             shift_and_schedule = ', '.join(shift_type)
 
         # Job type
-        job_type = response.xpath("//div[text()='Anstellungsart']//following-sibling::div//text() | //div[text()='Job type']//following-sibling::div//text()").getall()
+        job_type = response.xpath("//div[@aria-label='Anstellungsart']/div/ul/li/div/@data-testid | //div[text()='Job type']//following-sibling::div//text()").getall()
         if job_type is not None:
             # Remove unwanted keywords from the job_type list
             wanted_job_types = [
@@ -183,7 +183,8 @@ class IndeedZyteAPISpider(scrapy.Spider):
                 "Full-time", "Permanent", "Contract", "Part-time", "Temporary", "Apprenticeship", "Internship", "Internship / Co-op", "Casual", "Freelance", "Fixed term contract",
 
                 # German
-                "Festanstellung", "Teilzeit", "Vollzeit", "Ausbildung", "Befristet", "Praktikum", "Minijob", "Freie Mitarbeit"
+                "Festanstellung", "Teilzeit", "Vollzeit", "Ausbildung", "Befristet", "Praktikum", "Minijob", "Freie Mitarbeit", "Werkstudent", "Befristeter Vertrag",
+                "Arbeitnehmerüberlassung"
             ]
             
             # Collect a list of job types in a list 
@@ -206,7 +207,7 @@ class IndeedZyteAPISpider(scrapy.Spider):
             "shift_and_schedule": shift_and_schedule,
             "company_name": response.meta["company_name"],
             "company_indeed_url": company_indeed_url,
-            "city": response.meta["city"],
+            "city": response.meta["city"].strip() if response.meta["city"] is not None else None,
             "remote": response.meta["remote"],
             "salary": salary,
             "crawled_page_rank": response.meta["crawled_page_rank"],

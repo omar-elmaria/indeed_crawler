@@ -166,9 +166,18 @@ def post_crawling_func():
         df_phone_numbers = pd.DataFrame(df_phone_numbers)
         f.close()
     
+    # Open the master JSON file containing the phone numbers
+    with open(f"{output_file_name_of_google_crawler}_master.json", mode="r", encoding="utf-8") as f:
+        df_phone_numbers_master = json.load(f)
+        df_phone_numbers_master = pd.DataFrame(df_phone_numbers_master)
+        f.close()
+    
     # Merge the phone numbers with the main data frame
     logging.info("Merging the phone numbers with the main data frame")
-    df = pd.merge(left=df, right=df_phone_numbers, on="company_name", how="left")
+    try:
+        df = pd.merge(left=df, right=df_phone_numbers, on="company_name", how="left")
+    except KeyError as e:
+        df = pd.merge(left=df, right=df_phone_numbers_master, on="company_name", how="left")
 
     ###-------------------------------END OF PHONE NUMBER ADDITION PART------------------------------###
 
