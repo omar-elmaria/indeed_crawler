@@ -156,6 +156,8 @@ class IndeedZyteAPISpider(scrapy.Spider):
         # Salary (sometimes, the salary is not available on the job page, so we need to use the salary from the job page itself)
         if response.meta["salary"] is None:
             salary = response.xpath("//div[@aria-label='Gehalt']/div/ul/li/div/@data-testid | //div[text()='Pay']/following-sibling::div//div[contains(text(), 'a')]//text()").get()
+            if salary is not None:
+                salary = salary.replace("-tile", "").strip()
         else:
             salary = None
 
@@ -169,7 +171,7 @@ class IndeedZyteAPISpider(scrapy.Spider):
             ]
             
             # Collect a list of job types in a list 
-            shift_type = [sh for sh in shift_and_schedule if(sh in wanted_shift_types)]
+            shift_type = [sh.replace("-tile", "") for sh in shift_and_schedule if(sh.replace("-tile", "") in wanted_shift_types)]
 
             # Join the elements of the list to form a string and separate them with a comma
             shift_and_schedule = ', '.join(shift_type)
@@ -188,7 +190,7 @@ class IndeedZyteAPISpider(scrapy.Spider):
             ]
             
             # Collect a list of job types in a list 
-            job_type = [job for job in job_type if(job in wanted_job_types)]
+            job_type = [job.replace("-tile", "") for job in job_type if(job.replace("-tile", "") in wanted_job_types)]
 
             # Join the elements of the list to form a string and separate them with a comma
             job_type = ', '.join(job_type)
