@@ -36,7 +36,14 @@ class IndeedZyteAPISpider(scrapy.Spider):
             yield scrapy.Request(
                 url=i,
                 callback=self.parse,
-                meta={"crawler_name": f"crawler_{idx + 1}", "base_url": i}
+                meta={
+                    "crawler_name": f"crawler_{idx + 1}",
+                    "base_url": i,
+                    "zyte_api_automap": {
+                        "browserHtml": True,
+                        "javascript": True,
+                    }
+                }
             )
 
     def parse(self, response):
@@ -71,7 +78,15 @@ class IndeedZyteAPISpider(scrapy.Spider):
             yield scrapy.Request(
                 url=listing_page_url,
                 callback=self.parse_listing_page,
-                meta={"crawled_page_rank": page_counter, "listing_page_url": listing_page_url, "crawler_name": response.meta["crawler_name"]},
+                meta={
+                    "crawled_page_rank": page_counter,
+                    "listing_page_url": listing_page_url,
+                    "crawler_name": response.meta["crawler_name"],
+                    "zyte_api_automap": {
+                        "browserHtml": True,
+                        "javascript": True,
+                    }
+                },
                 dont_filter=True
             )
             page_counter += 1
@@ -137,7 +152,11 @@ class IndeedZyteAPISpider(scrapy.Spider):
                     "remote": remote,
                     "salary": salary,
                     "crawled_page_rank": response.meta["crawled_page_rank"],
-                    "crawler_name": response.meta["crawler_name"]
+                    "crawler_name": response.meta["crawler_name"],
+                    "zyte_api_automap": {
+                        "browserHtml": True,
+                        "javascript": True,
+                    }
                 }
 
                 yield scrapy.Request(
