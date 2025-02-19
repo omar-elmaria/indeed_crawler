@@ -104,7 +104,7 @@ class IndeedZyteAPISpider(scrapy.Spider):
                 # Clean the crawled fields
                 # job_indeed_url
                 try:
-                    job_indeed_url = urljoin(response.url, li.xpath(".//h2[contains(@class, 'jobTitle')]/a/../@href").get())
+                    job_indeed_url = urljoin(response.url, li.xpath(".//h2[contains(@class, 'jobTitle')]/a/@href").get())
                 except TypeError:
                     job_indeed_url = None
 
@@ -174,14 +174,14 @@ class IndeedZyteAPISpider(scrapy.Spider):
 
         # Salary (sometimes, the salary is not available on the job page, so we need to use the salary from the job page itself)
         if response.meta["salary"] is None:
-            salary = response.xpath("//div[@aria-label='Gehalt']/div/ul/li/div/@data-testid | //div[text()='Pay']/following-sibling::div//div[contains(text(), 'a')]//text()").get()
+            salary = response.xpath("//div[@aria-label='Gehalt']//div/@data-testid | //div[text()='Pay']/following-sibling::div//div[contains(text(), 'a')]//text()").get()
             if salary is not None:
                 salary = salary.replace("-tile", "").strip()
         else:
-            salary = None
+            salary = response.meta["salary"]
 
         # Shift and schedule
-        shift_and_schedule = response.xpath("//div[@aria-label='Schichten und Arbeitszeiten']/div/ul/li/div/@data-testid | //div[text()='Shift and schedule']/following-sibling::div//div//text()").getall()
+        shift_and_schedule = response.xpath("//div[@aria-label='Schichten und Arbeitszeiten']//div/@data-testid | //div[text()='Shift and schedule']/following-sibling::div//div//text()").getall()
         if shift_and_schedule is not None:
             # Remove unwanted keywords from the shift_and_schedule list
             wanted_shift_types = [
@@ -196,7 +196,7 @@ class IndeedZyteAPISpider(scrapy.Spider):
             shift_and_schedule = ', '.join(shift_type)
 
         # Job type
-        job_type = response.xpath("//div[@aria-label='Anstellungsart']/div/ul/li/div/@data-testid | //div[text()='Job type']//following-sibling::div//text()").getall()
+        job_type = response.xpath("//div[@aria-label='Anstellungsart']/div//ul/li/div/@data-testid | //div[text()='Job type']//following-sibling::div//text()").getall()
         if job_type is not None:
             # Remove unwanted keywords from the job_type list
             wanted_job_types = [
