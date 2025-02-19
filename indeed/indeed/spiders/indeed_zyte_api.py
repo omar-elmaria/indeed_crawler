@@ -52,7 +52,7 @@ class IndeedZyteAPISpider(scrapy.Spider):
         logging.info(f"The total number of jobs under the URL of {response.meta['crawler_name']}: {num_jobs}")
 
         # Extract the number of jobs as an integer
-        num_jobs = int(''.join(re.findall(pattern="\d+", string=num_jobs)))
+        num_jobs = int(''.join(re.findall(pattern=r"\d+", string=num_jobs)))
 
         # Calculate the index corresponding to the number of pages we will loop over
         num_page_loop_all = ceil(num_jobs / num_listings_per_page)
@@ -96,7 +96,7 @@ class IndeedZyteAPISpider(scrapy.Spider):
         # Old listings selector (18-08-2023): //ul[@class='jobsearch-ResultsList css-0']/li/div[not(contains(@id, 'mosaic'))]
         listings = response.xpath("//div[@id='mosaic-provider-jobcards']/ul/li/div[not(contains(@id, 'mosaic'))]")
         for li in listings:
-            job_title_name = li.xpath(".//h2[contains(@class, 'jobTitle')]/a/span/text()").get()
+            job_title_name = li.xpath(".//h2[contains(@class, 'jobTitle')]/a/text() | .//h2[contains(@class, 'jobTitle')]/a/span/text()").get()
             if job_title_name is None: # Sometimes, the the HTML content under "li" is NULL. If this is the case, don't add anything to the "output_dict"
                 logging.info(f"The job_title_name of {li} under the URL of {response.meta['crawler_name']} is None. Continuing the the next listing")
                 continue
@@ -104,7 +104,7 @@ class IndeedZyteAPISpider(scrapy.Spider):
                 # Clean the crawled fields
                 # job_indeed_url
                 try:
-                    job_indeed_url = urljoin(response.url, li.xpath(".//h2[contains(@class, 'jobTitle')]/a/span/../@href").get())
+                    job_indeed_url = urljoin(response.url, li.xpath(".//h2[contains(@class, 'jobTitle')]/a/@href").get())
                 except TypeError:
                     job_indeed_url = None
 
@@ -128,7 +128,7 @@ class IndeedZyteAPISpider(scrapy.Spider):
                 if city is not None:
                     if bool([wo for wo in unwanted_words if(wo in city)]): # If TRUE (i.e., if an unwanted sub-string exists in city, remove it from the main string, which is city) 
                         # Set the remote variable to the value of the unwanted word
-                        remote = re.findall(pattern=".*(?=\sin\s)", string=city)[0]
+                        remote = re.findall(pattern=r".*(?=\sin\s)", string=city)[0]
 
                         # Remove the unwanted word from city
                         for wo in unwanted_words:
@@ -139,7 +139,7 @@ class IndeedZyteAPISpider(scrapy.Spider):
                     remote = None
                 
                 # salary
-                salary = li.xpath(".//div[@class='metadata salary-snippet-container']/div/text()").get()
+                salary = li.xpath(".//div[contains(@class, 'metadata salary-snippet-container')]/div/text()").get()
                 
                 # Yield the data
                 output_dict_listing_page = {
@@ -174,14 +174,14 @@ class IndeedZyteAPISpider(scrapy.Spider):
 
         # Salary (sometimes, the salary is not available on the job page, so we need to use the salary from the job page itself)
         if response.meta["salary"] is None:
-            salary = response.xpath("//div[@aria-label='Gehalt']/div/ul/li/div/@data-testid | //div[text()='Pay']/following-sibling::div//div[contains(text(), 'a')]//text()").get()
+            salary = response.xpath("//div[@aria-label='Gehalt']//div/@data-testid | //div[text()='Pay']/following-sibling::div//div[contains(text(), 'a')]//text()").get()
             if salary is not None:
                 salary = salary.replace("-tile", "").strip()
         else:
-            salary = None
+            salary = response.meta["salary"]
 
         # Shift and schedule
-        shift_and_schedule = response.xpath("//div[@aria-label='Schichten und Arbeitszeiten']/div/ul/li/div/@data-testid | //div[text()='Shift and schedule']/following-sibling::div//div//text()").getall()
+        shift_and_schedule = response.xpath("//div[@aria-label='Schichten und Arbeitszeiten']//div/@data-testid | //div[text()='Shift and schedule']/following-sibling::div//div//text()").getall()
         if shift_and_schedule is not None:
             # Remove unwanted keywords from the shift_and_schedule list
             wanted_shift_types = [
@@ -196,7 +196,7 @@ class IndeedZyteAPISpider(scrapy.Spider):
             shift_and_schedule = ', '.join(shift_type)
 
         # Job type
-        job_type = response.xpath("//div[@aria-label='Anstellungsart']/div/ul/li/div/@data-testid | //div[text()='Job type']//following-sibling::div//text()").getall()
+        job_type = response.xpath("//div[@aria-label='Anstellungsart']/div//ul/li/div/@data-testid | //div[text()='Job type']//following-sibling::div//text()").getall()
         if job_type is not None:
             # Remove unwanted keywords from the job_type list
             wanted_job_types = [
@@ -215,7 +215,8 @@ class IndeedZyteAPISpider(scrapy.Spider):
             job_type = ', '.join(job_type)
 
         # Job description
-        job_description = response.css("#jobDescriptionText *::text").getall() # Can also be response.xpath("//div[@id='jobDescriptionText']//text()").getall()
+        # job_description = response.css("#jobDescriptionText *::text").getall() # Can also be response.xpath("//div[@id='jobDescriptionText']//text()").getall()
+        job_description = response.xpath("//div[@id='jobDescriptionText']//text()").getall()
         if job_description is not None:
             job_description = [job.strip() for job in job_description]
             job_description = [i for i in job_description if i not in [""]]
