@@ -1,4 +1,7 @@
 import scrapy
+import sys
+sys.path.append(sys.path[0] + "/../")
+sys.path.append(sys.path[0] + "/../../")
 from inputs import (
     custom_settings_zyte_api_dict,
     num_listings_per_page,
@@ -82,10 +85,6 @@ class IndeedZyteAPISpider(scrapy.Spider):
                     "crawled_page_rank": page_counter,
                     "listing_page_url": listing_page_url,
                     "crawler_name": response.meta["crawler_name"],
-                    "zyte_api_automap": {
-                        "browserHtml": True,
-                        "javascript": True,
-                    }
                 },
                 dont_filter=True
             )
